@@ -404,6 +404,9 @@ return (ver != NULL && *ver != '1') ? 0 : 1;
    []
 [])
 
+AC_DEFINE([MADV_HUGEPAGE], [1], [support TPF])
+
+
 trylibssldir=""
 AC_ARG_WITH(libssl,
        [  --with-libssl=PATH     Specify path to libssl installation ],

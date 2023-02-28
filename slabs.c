@@ -338,8 +338,13 @@ static int grow_slab_list (const unsigned int id) {
     slabclass_t *p = &slabclass[id];
     if (p->slabs == p->list_size) {
         size_t new_size =  (p->list_size != 0) ? p->list_size * 2 : 16;
-        void *new_list = realloc(p->slab_list, new_size * sizeof(void *));
+        void *new_list = realloc(p->slab_list, new_size * sizeof(void *));        
+
         if (new_list == 0) return 0;
+        if (settings.verbose > 1) {
+            fprintf(stderr, "slab list created: new size %lu for slab class %u\n",
+                    new_size, id);
+        }
         p->list_size = new_size;
         p->slab_list = new_list;
     }
@@ -380,7 +385,19 @@ static int do_slabs_newslab(const unsigned int id) {
         MEMCACHED_SLABS_SLABCLASS_ALLOCATE_FAILED(id);
         return 0;
     }
+    /* There are quite some detours in the 3 lines below:
 
+    *  When do_slabs_newslab(id) is called for the 1st time on slab class id,
+    *  e.g. when memcached starts, p->slabs = 0 and p->slab_list is not allocated;
+    *  in grow_slab_list(id), p->slab_list is allocated with a size of 16
+    *  and return value of grow_slab_list(id) is >0 so the other 2 conditions 
+    *  are to be cheked:
+    *  1. initially, there are no pages in the global pool, so 
+    *     get_page_from_global_pool() returns NULL
+    *  2. memory_allocate((size_t)len) will allocate a 1MB slab and 
+    *     ptr points to that space   
+       Now p->slab_list can have its first entry(slab): ptr       
+    */ 
     if ((grow_slab_list(id) == 0) ||
         (((ptr = get_page_from_global_pool()) == NULL) &&
         ((ptr = memory_allocate((size_t)len)) == 0))) {
@@ -421,7 +438,7 @@ static void *do_slabs_alloc(const size_t size, unsigned int id,
        we have something on our freelist, or we could allocate a new page */
     if (p->sl_curr == 0 && flags != SLABS_ALLOC_NO_NEWPAGE) {
         do_slabs_newslab(id);
-    }
+    } 
 
     if (p->sl_curr != 0) {
         /* return off our freelist */
