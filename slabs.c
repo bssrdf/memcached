@@ -442,14 +442,18 @@ static void *do_slabs_alloc(const size_t size, unsigned int id,
 
     if (p->sl_curr != 0) {
         /* return off our freelist */
-        it = (item *)p->slots;
-        p->slots = it->next;
+        it = (item *)p->slots; /* Remove the front element (f) from the 
+                                 free list, and set it to it.
+                                 In do_slabs_free(), an element is added to 
+                                 the front of the free list. */
+        p->slots = it->next; /* p->slots points to next available chunk*/
         if (it->next) it->next->prev = 0;
         /* Kill flag and initialize refcount here for lock safety in slab
          * mover's freeness detection. */
-        it->it_flags &= ~ITEM_SLABBED;
+        it->it_flags &= ~ITEM_SLABBED; /* Clear the ITEM_SLABBED for the chuck 
+                                     this flag is set in do_slabs_free() */
         it->refcount = 1;
-        p->sl_curr--;
+        p->sl_curr--; /* in do_slabs_free, p->sl_curr++; */
         ret = (void *)it;
     } else {
         ret = NULL;
